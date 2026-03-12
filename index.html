@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Monitor 12 Leads - Medical System</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Smoothie Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/smoothie@1.36.1/smoothie.min.js"></script>
+    <style>
+        /* TEMA */
+        body {
+            background-color: #fce4ec;
+            color: #880e4f;
+            font-family: 'Segoe UI', sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        /* Login Page */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f8bbd0 0%, #fce4ec 100%);
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(136, 14, 79, 0.2);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            border-left: 6px solid #d81b60;
+        }
+        .login-card h2 {
+            color: #d81b60;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .login-card .form-label {
+            color: #880e4f;
+            font-weight: 600;
+        }
+        .login-card .form-control {
+            border-radius: 50px;
+            border: 2px solid #f8bbd0;
+            padding: 12px 20px;
+        }
+        .login-card .form-control:focus {
+            border-color: #d81b60;
+            box-shadow: none;
+        }
+        .login-card .btn-login {
+            background-color: #d81b60;
+            color: white;
+            border-radius: 50px;
+            padding: 12px;
+            font-weight: 700;
+            width: 100%;
+            border: none;
+            transition: 0.3s;
+        }
+        .login-card .btn-login:hover {
+            background-color: #ad1457;
+            transform: scale(1.02);
+        }
+        /* Dashboard (awalnya disembunyikan) */
+        #dashboard {
+            display: none;
+        }
+        /* Header - diperbesar */
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(136, 14, 79, 0.1);
+            padding: 25px 20px;
+            margin-bottom: 20px;
+            border-left: 8px solid #d81b60;
+            position: relative;
+        }
+        .title-text {
+            color: #d81b60;
+            font-weight: 800;
+            font-size: 2.2rem;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .sub-title {
+            font-size: 1rem;
+            color: #ad1457;
+            font-weight: 500;
+        }
+        /* Status badge */
+        .status-badge {
+            font-size: 1.1rem;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        .status-connected {
+            background-color: #4caf50;
+            color: white;
+            animation: pulse-green 2s infinite;
+        }
+        .status-disconnected {
+            background-color: #ef5350;
+            color: white;
+        }
+        .status-connecting {
+            background-color: #fb8c00;
+            color: white;
+            animation: pulse-orange 1.5s infinite;
+        }
+        @keyframes pulse-green {
+            0%   { box-shadow: 0 0 0 0 rgba(76,175,80,0.7); }
+            70%  { box-shadow: 0 0 0 15px rgba(76,175,80,0); }
+            100% { box-shadow: 0 0 0 0 rgba(76,175,80,0); }
+        }
+        @keyframes pulse-orange {
+            0%   { box-shadow: 0 0 0 0 rgba(251,140,0,0.7); }
+            70%  { box-shadow: 0 0 0 10px rgba(251,140,0,0); }
+            100% { box-shadow: 0 0 0 0 rgba(251,140,0,0); }
+        }
+        /* Mode badge - dibuat datar (tanpa border-radius, tanpa shadow) */
+        .mode-badge {
+            background-color: #880e4f;
+            color: white;
+            padding: 10px 25px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-left: 10px;
+            border-radius: 0; /* datar */
+            box-shadow: none;
+            display: inline-block;
+        }
+        /* Chart box - dengan cursor pointer */
+        .chart-box {
+            background: #ffffff;
+            border: 2px solid #f8bbd0;
+            border-radius: 12px;
+            height: 200px;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .chart-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(136, 14, 79, 0.15);
+            border-color: #d81b60;
+        }
+        .chart-label {
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            color: #d81b60;
+            font-weight: bold;
+            font-size: 1.1rem;
+            z-index: 10;
+            background: rgba(255,255,255,0.92);
+            padding: 2px 10px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        .chart-value {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            color: #880e4f;
+            font-size: 0.9rem;
+            font-weight: 600;
+            z-index: 10;
+            background: rgba(255,255,255,0.92);
+            padding: 2px 10px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        .chart-box canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        /* Heart beat icon */
+        .heart-beat {
+            color: #d81b60;
+            animation: beat 1.2s infinite;
+            display: inline-block;
+        }
+        @keyframes beat {
+            0%  { transform: scale(1); }
+            15% { transform: scale(1.15); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.1); }
+            60% { transform: scale(1); }
+        }
+        /* Info footer - dengan tambahan web by W */
+        .info-footer {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 15px;
+            color: #ad1457;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        .info-footer span {
+            display: block;
+            margin-top: 5px;
+            font-weight: 600;
+            color: #880e4f;
+        }
+        /* Corner info (server & sample) */
+        .corner-info {
+            position: fixed;
+            bottom: 10px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            padding: 12px 20px;
+            border-radius: 50px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.15);
+            border-left: 4px solid #d81b60;
+            font-size: 1rem;
+            z-index: 1000;
+        }
+        .corner-info i {
+            color: #d81b60;
+            margin-right: 5px;
+        }
+        /* Tombol download */
+        .btn-download {
+            background-color: #d81b60;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-download:hover {
+            background-color: #ad1457;
+            color: white;
+            transform: scale(1.05);
+        }
+        /* Logout button */
+        .btn-logout {
+            background-color: transparent;
+            border: 2px solid #d81b60;
+            color: #d81b60;
+            border-radius: 50px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-logout:hover {
+            background-color: #d81b60;
+            color: white;
+        }
+        /* Modal untuk zoom */
+        .modal-zoom .modal-dialog {
+            max-width: 80%;
+        }
+        .modal-zoom .modal-content {
+            border-radius: 20px;
+            border: 3px solid #d81b60;
+        }
+        .modal-zoom .modal-header {
+            background-color: #fce4ec;
+            color: #880e4f;
+            border-bottom: 2px solid #d81b60;
+        }
+        .modal-zoom .modal-title {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        .modal-zoom .modal-body {
+            height: 500px;
+            padding: 20px;
+        }
+        #zoomCanvas {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Halaman Login -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <h2><i class="fas fa-heartbeat heart-beat"></i> ECG Monitor</h2>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" class="form-control" id="username" placeholder="Audy Rahadi" value="Audy Rahadi" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" placeholder="••••••" value="Audy Jelek" required>
+                </div>
+                <button type="submit" class="btn-login">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard (awalnya tersembunyi) -->
+    <div id="dashboard">
+        <div class="container-fluid mt-3">
+            <!-- Header yang lebih besar dan berisi -->
+            <div class="header-card">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <h1 class="title-text mb-0">
+                            <i class="fas fa-heartbeat heart-beat"></i> ECG 12 Leads
+                        </h1>
+                        <!-- Tulisan di bawah ECG 12 Leads diganti -->
+                        <div class="sub-title">BY AUDY X BERLIN</div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <span id="status" class="badge status-badge status-connecting">
+                            <i class="fas fa-wifi" id="status-icon"></i>
+                            <span id="status-text"> Connecting...</span>
+                        </span>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <!-- Mode badge dibuat datar -->
+                        <span id="modeDisplay" class="mode-badge">
+                            <i class="fas fa-filter"></i> Mode: <span id="modeText">Elliptic</span>
+                        </span>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button id="downloadBtn" class="btn-download me-2">
+                            <i class="fas fa-download"></i> CSV
+                        </button>
+                        <button id="logoutBtn" class="btn-logout">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid 12 Leads -->
+            <div class="row g-3" id="charts-container"></div>
+
+            <!-- Footer dengan tambahan web by W -->
+            <div class="info-footer">
+                <i class="fas fa-sync-alt"></i> Klik salah satu grafik untuk memperbesar &bull; WebSocket &bull; 12-Lead ECG
+                <span>web by W</span>
+            </div>
+        </div>
+
+        <!-- Informasi server dan sample di pojok kanan bawah -->
+        <div class="corner-info">
+            <i class="fas fa-server"></i> <span id="display-ip">-</span> &nbsp;|&nbsp;
+            <i class="fas fa-chart-line"></i> Sample: <span id="total-samples">0</span>
+        </div>
+    </div>
+
+    <!-- Modal untuk Zoom -->
+    <div class="modal fade modal-zoom" id="zoomModal" tabindex="-1" aria-labelledby="zoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="zoomModalLabel">Zoom - Lead <span id="zoomLeadName"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <canvas id="zoomCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ============================================================
+        // LOGIN HANDLER
+        // ============================================================
+        const loginPage = document.getElementById('loginPage');
+        const dashboard = document.getElementById('dashboard');
+        const loginForm = document.getElementById('loginForm');
+
+        // Cek apakah sudah login sebelumnya (gunakan sessionStorage)
+        if (sessionStorage.getItem('loggedIn') === 'true') {
+            loginPage.style.display = 'none';
+            dashboard.style.display = 'block';
+            initDashboard();
+        } else {
+            loginPage.style.display = 'flex';
+            dashboard.style.display = 'none';
+        }
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            // Sesuai permintaan: username "Audy Rahadi", password "Audy Jelek"
+            if (username === 'Audy Rahadi' && password === 'Audy Jelek') {
+                sessionStorage.setItem('loggedIn', 'true');
+                loginPage.style.display = 'none';
+                dashboard.style.display = 'block';
+                initDashboard();
+            } else {
+                alert('Username atau password salah!');
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.removeItem('loggedIn');
+            loginPage.style.display = 'flex';
+            dashboard.style.display = 'none';
+            // Tutup koneksi WebSocket jika ada
+            if (window.ws) window.ws.close();
+        });
+
+        // ============================================================
+        // DASHBOARD INIT (dipanggil setelah login)
+        // ============================================================
+        function initDashboard() {
+            // Konfigurasi
+            const LEADS = ['I','II','III','aVR','aVL','aVF','V1','V2','V3','V4','V5','V6'];
+            const RECONNECT_DELAY = 2000;
+            const TIMEOUT_MS = 4000;
+            const MAX_STORED_SAMPLES = 10000;
+
+            const lines = {};
+            const valueEls = {};
+            let ws = null;
+            window.ws = ws; // agar bisa diakses dari luar
+            let heartbeatTimer = null;
+            let lastDataTime = Date.now();
+            let totalSamples = 0;
+            let allData = [];
+            let currentMode = 'elliptic'; // default
+
+            // Variabel untuk modal zoom
+            let modalChart = null;
+            let modalTimeSeries = null;
+            let modalLead = null;
+            const zoomCanvas = document.getElementById('zoomCanvas');
+            const zoomLeadSpan = document.getElementById('zoomLeadName');
+            const zoomModal = new bootstrap.Modal(document.getElementById('zoomModal'));
+
+            // Bangun grid grafik
+            const container = document.getElementById('charts-container');
+            container.innerHTML = ''; // kosongkan jika sudah ada
+            LEADS.forEach(name => {
+                const col = document.createElement('div');
+                col.className = 'col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-12';
+                col.innerHTML = `
+                    <div class="chart-box" data-lead="${name}">
+                        <div class="chart-label">${name}</div>
+                        <div class="chart-value" id="val_${name}">—</div>
+                        <canvas id="chart_${name}"></canvas>
+                    </div>`;
+                container.appendChild(col);
+
+                const chart = new SmoothieChart({
+                    responsive: true,
+                    millisPerPixel: 22,
+                    interpolation: 'bezier',
+                    grid: {
+                        strokeStyle: '#f8bbd0',
+                        fillStyle: '#ffffff',
+                        millisPerLine: 400,
+                        verticalSections: 4,
+                        borderVisible: false
+                    },
+                    labels: { disabled: true },
+                    minValueScale: 1.2,
+                    maxValueScale: 1.2
+                });
+
+                const ts = new TimeSeries();
+                chart.addTimeSeries(ts, { strokeStyle: '#d81b60', lineWidth: 2.5 });
+                chart.streamTo(document.getElementById(`chart_${name}`), 100);
+                lines[name] = ts;
+                valueEls[name] = document.getElementById(`val_${name}`);
+            });
+
+            // Event klik pada chart-box untuk zoom
+            document.querySelectorAll('.chart-box').forEach(box => {
+                box.addEventListener('click', (e) => {
+                    const lead = box.dataset.lead;
+                    openZoomModal(lead);
+                });
+            });
+
+            // Fungsi membuka modal zoom
+            function openZoomModal(lead) {
+                if (modalChart) {
+                    // Hentikan chart modal sebelumnya
+                    modalChart.stop();
+                }
+                zoomLeadSpan.innerText = lead;
+                // Buat chart baru di modal
+                modalChart = new SmoothieChart({
+                    responsive: true,
+                    millisPerPixel: 12, // lebih rapat untuk tampilan besar
+                    interpolation: 'bezier',
+                    grid: {
+                        strokeStyle: '#f8bbd0',
+                        fillStyle: '#ffffff',
+                        millisPerLine: 200,
+                        verticalSections: 8,
+                        borderVisible: true
+                    },
+                    labels: { fontSize: 12, fillStyle: '#880e4f' },
+                    minValueScale: 1.2,
+                    maxValueScale: 1.2
+                });
+                modalTimeSeries = new TimeSeries();
+                modalChart.addTimeSeries(modalTimeSeries, { strokeStyle: '#d81b60', lineWidth: 3 });
+                modalChart.streamTo(zoomCanvas, 100);
+
+                // Isi dengan data historis yang ada (dari allData)
+                const now = Date.now();
+                // Tampilkan 200 data terakhir
+                const recentData = allData.slice(-200);
+                recentData.forEach(sample => {
+                    if (sample[lead] !== undefined) {
+                        modalTimeSeries.append(sample.timestamp, sample[lead]);
+                    }
+                });
+
+                modalLead = lead;
+                zoomModal.show();
+            }
+
+            // Saat modal ditutup, bersihkan
+            document.getElementById('zoomModal').addEventListener('hidden.bs.modal', function () {
+                if (modalChart) {
+                    modalChart.stop();
+                    modalChart = null;
+                    modalTimeSeries = null;
+                    modalLead = null;
+                }
+            });
+
+            // UI Helper
+            function setStatus(state) {
+                const el = document.getElementById('status');
+                const text = document.getElementById('status-text');
+                const icon = document.getElementById('status-icon');
+                el.className = 'badge status-badge';
+                if (state === 'connected') {
+                    el.classList.add('status-connected');
+                    text.innerText = ' Terhubung';
+                    icon.className = 'fas fa-wifi';
+                } else if (state === 'connecting') {
+                    el.classList.add('status-connecting');
+                    text.innerText = ' Menghubungkan...';
+                    icon.className = 'fas fa-circle-notch fa-spin';
+                } else {
+                    el.classList.add('status-disconnected');
+                    text.innerText = ' Terputus';
+                    icon.className = 'fas fa-wifi';
+                }
+            }
+
+            // Update mode display
+            function updateMode(mode) {
+                currentMode = mode;
+                let modeText = '';
+                if (mode === 0) modeText = 'Raw';
+                else if (mode === 1) modeText = 'Elliptic';
+                else if (mode === 2) modeText = 'Adaptif';
+                else modeText = mode; // jika string
+                document.getElementById('modeText').innerText = modeText;
+            }
+
+            // Heartbeat
+            function startHeartbeat() {
+                if (heartbeatTimer) clearInterval(heartbeatTimer);
+                heartbeatTimer = setInterval(() => {
+                    if (Date.now() - lastDataTime > TIMEOUT_MS) {
+                        console.warn('⚠️ Timeout! Tidak ada data lebih dari', TIMEOUT_MS, 'ms');
+                        setStatus('disconnected');
+                    }
+                }, 1000);
+            }
+
+            // Proses data
+            function processData(dataList) {
+                const now = Date.now();
+                dataList.forEach((d, i) => {
+                    const t = now - ((dataList.length - 1 - i) * 2);
+                    const sample = { timestamp: t };
+                    LEADS.forEach(name => {
+                        const key = 'lead_' + name;
+                        let val = d[key];
+                        if (val === undefined || val === null) val = 0;
+                        sample[name] = val;
+                        // Tambahkan ke grafik dashboard
+                        lines[name].append(t, parseFloat(val));
+                        // Jika modal sedang aktif untuk lead ini, tambahkan juga ke modal
+                        if (modalLead === name && modalTimeSeries) {
+                            modalTimeSeries.append(t, parseFloat(val));
+                        }
+                        if (i === dataList.length - 1) {
+                            valueEls[name].innerText = parseFloat(val).toFixed(2);
+                        }
+                    });
+                    allData.push(sample);
+                });
+                if (allData.length > MAX_STORED_SAMPLES) {
+                    allData = allData.slice(-MAX_STORED_SAMPLES);
+                }
+                totalSamples += dataList.length;
+                document.getElementById('total-samples').innerText = totalSamples;
+            }
+
+            // Koneksi WebSocket
+            function connect() {
+                const host = window.location.hostname || 'localhost';
+                // Tampilkan hostname, bukan IP
+                document.getElementById('display-ip').innerText = host + ':3000';
+                console.log('🔌 Menghubungkan ke:', host);
+
+                // Gunakan hostname untuk koneksi WebSocket (bisa berupa domain atau IP)
+                const wsUrl = 'ws://' + host + ':3000';
+                setStatus('connecting');
+
+                ws = new WebSocket(wsUrl);
+                window.ws = ws;
+
+                ws.onopen = () => {
+                    console.log('✅ WebSocket terhubung');
+                    setStatus('connected');
+                    lastDataTime = Date.now();
+                    startHeartbeat();
+                };
+
+                ws.onmessage = (event) => {
+                    lastDataTime = Date.now();
+                    if (document.getElementById('status-text').innerText !== ' Terhubung') setStatus('connected');
+
+                    try {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'mode') {
+                            updateMode(msg.mode);
+                        } else {
+                            let dataList = [];
+                            if (msg.type === 'history' && Array.isArray(msg.data)) {
+                                dataList = msg.data;
+                                console.log(`📜 History: ${dataList.length} record`);
+                            } else if (msg.type === 'realtime' && msg.data) {
+                                dataList = [msg.data];
+                                if (msg.mode !== undefined) updateMode(msg.mode);
+                            }
+                            if (dataList.length > 0) {
+                                processData(dataList);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Gagal parse pesan:', e.message);
+                    }
+                };
+
+                ws.onclose = () => {
+                    console.log('❌ WebSocket terputus');
+                    setStatus('disconnected');
+                    if (heartbeatTimer) clearInterval(heartbeatTimer);
+                    setTimeout(connect, RECONNECT_DELAY);
+                };
+
+                ws.onerror = (err) => {
+                    console.error('⚠️ WebSocket error');
+                    ws.close();
+                };
+            }
+
+            // Download CSV
+            function downloadCSV() {
+                if (allData.length === 0) {
+                    alert('Belum ada data untuk di-download.');
+                    return;
+                }
+                let csv = 'Timestamp,' + LEADS.join(',') + '\n';
+                allData.forEach(sample => {
+                    const row = [sample.timestamp];
+                    LEADS.forEach(lead => {
+                        row.push(sample[lead] !== undefined ? sample[lead] : 0);
+                    });
+                    csv += row.join(',') + '\n';
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ecg_data_' + new Date().toISOString().slice(0,19).replace(/:/g, '-') + '.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+
+            // Event listener download
+            document.getElementById('downloadBtn').addEventListener('click', downloadCSV);
+
+            // Mulai koneksi
+            connect();
+        }
+    </script>
+</body>
+</html>
